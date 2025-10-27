@@ -2,7 +2,13 @@
 # Licensed under the MIT license.
 
 import msal
-from flask import current_app as app
+try:
+    from flask import current_app
+    flask_available = True
+except ImportError:
+    flask_available = False
+
+from app import App
 from utils import Utils
 
 
@@ -14,19 +20,43 @@ class AadService:
         Returns:
             string: Access token
         '''
-
-        config_result = Utils.validate_config(app)
+        
+        # Try to use Flask app context first, fallback to App config
+        try:
+            if flask_available:
+                app_config = current_app.config
+                config_result = Utils.validate_config(current_app)
+            else:
+                raise RuntimeError("Flask not available")
+        except (RuntimeError, Exception):
+            # Running outside Flask context, use App config
+            app_config = App.config
+            config_result = Utils.validate_config(App.config)
+        
         if config_result:
             raise Exception(config_result)
 
-        authenticate_mode = app.config['AUTHENTICATION_MODE']
-        tenant_id = app.config['TENANT_ID']
-        client_id = app.config['CLIENT_ID']
-        username = app.config['POWER_BI_USER']
-        password = app.config['POWER_BI_PASS']
-        client_secret = app.config['CLIENT_SECRET']
-        scope = app.config['SCOPE_BASE']
-        authority = app.config['AUTHORITY_URL']
+        # Handle different config types
+        if hasattr(app_config, '__getitem__'):
+            # Flask config dict
+            authenticate_mode = app_config['AUTHENTICATION_MODE']
+            tenant_id = app_config['TENANT_ID']
+            client_id = app_config['CLIENT_ID']
+            username = app_config['POWER_BI_USER']
+            password = app_config['POWER_BI_PASS']
+            client_secret = app_config['CLIENT_SECRET']
+            scope = app_config['SCOPE_BASE']
+            authority = app_config['AUTHORITY_URL']
+        else:
+            # BaseConfig class attributes
+            authenticate_mode = app_config.AUTHENTICATION_MODE
+            tenant_id = app_config.TENANT_ID
+            client_id = app_config.CLIENT_ID
+            username = app_config.POWER_BI_USER
+            password = app_config.POWER_BI_PASS
+            client_secret = app_config.CLIENT_SECRET
+            scope = app_config.SCOPE_BASE
+            authority = app_config.AUTHORITY_URL
         response = None
 
         try:
