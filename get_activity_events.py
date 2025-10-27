@@ -2,12 +2,15 @@ import json
 import os
 from datetime import date, timedelta
 
-import pandas as pd
+# import pandas as pd
 
 from app import App
 from config import BaseConfig
 from services.aadservice import AadService
 from services.powerbi.getactivityevents import GetActivityEventsService
+
+# Initialize App configuration for standalone execution
+App.setup(BaseConfig)
 
 # Get today's date in YYYY-MM-DD format
 current_date = date.today().strftime("%Y_%m_%d")
@@ -16,7 +19,7 @@ current_date = date.today().strftime("%Y_%m_%d")
 response_counter = 0
 
 # Folder path
-path = "./Data/ActivityEvents/"
+path = "./data/ActivityEvents/"
 
 # Initialize app object and load config
 app = App.setup(BaseConfig)
@@ -53,51 +56,51 @@ def main(event_date):
     global path
 
     # Specify empty dataframe with all columns
-    schema = {
-        "Id": str(),
-        "RecordType": str(),
-        "CreationTime": str(),
-        "Operation": str(),
-        "OrganizationId": str(),
-        "UserType": int(),
-        "UserKey": str(),
-        "Workload": str(),
-        "UserId": str(),
-        "ClientIP": str(),
-        "UserAgent": str(),
-        "Activity": str(),
-        "ItemName": str(),
-        "WorkSpaceName": str(),
-        "DatasetName": str(),
-        "ReportName": str(),
-        "CapacityId": str(),
-        "CapacityName": str(),
-        "WorkspaceId": str(),
-        "ObjectId": str(),
-        "DatasetId": str(),
-        "ReportId": str(),
-        "ArtifactId": str(),
-        "ArtifactName": str(),
-        "IsSuccess": str(),
-        "ReportType": int(),
-        "RequestId": str(),
-        "ActivityId": str(),
-        "DistributionMethod": str(),
-        "ConsumptionMethod": str(),
-        "ArtifactKind": str(),
-        "RefreshEnforcementPolicy": str(),
-        "ExportEventStartDateTimeParameter": str(),
-        "ExportEventEndDateTimeParameter": str(),
-        "ModelsSnapshots": str(),
-        "DataConnectivityMode": str(),
-        "RefreshType": str(),
-        "LastRefreshTime": str(),
-        "DatasourceId": str(),
-        "GatewayClusterId": str(),
-        "IsTenantAdminApi": str(),
-        "GatewayClustersObjectIds": str(),
-    }
-    df = pd.DataFrame(schema, index=[0])
+    # schema = {
+    #     "Id": str(),
+    #     "RecordType": str(),
+    #     "CreationTime": str(),
+    #     "Operation": str(),
+    #     "OrganizationId": str(),
+    #     "UserType": int(),
+    #     "UserKey": str(),
+    #     "Workload": str(),
+    #     "UserId": str(),
+    #     "ClientIP": str(),
+    #     "UserAgent": str(),
+    #     "Activity": str(),
+    #     "ItemName": str(),
+    #     "WorkSpaceName": str(),
+    #     "DatasetName": str(),
+    #     "ReportName": str(),
+    #     "CapacityId": str(),
+    #     "CapacityName": str(),
+    #     "WorkspaceId": str(),
+    #     "ObjectId": str(),
+    #     "DatasetId": str(),
+    #     "ReportId": str(),
+    #     "ArtifactId": str(),
+    #     "ArtifactName": str(),
+    #     "IsSuccess": str(),
+    #     "ReportType": int(),
+    #     "RequestId": str(),
+    #     "ActivityId": str(),
+    #     "DistributionMethod": str(),
+    #     "ConsumptionMethod": str(),
+    #     "ArtifactKind": str(),
+    #     "RefreshEnforcementPolicy": str(),
+    #     "ExportEventStartDateTimeParameter": str(),
+    #     "ExportEventEndDateTimeParameter": str(),
+    #     "ModelsSnapshots": str(),
+    #     "DataConnectivityMode": str(),
+    #     "RefreshType": str(),
+    #     "LastRefreshTime": str(),
+    #     "DatasourceId": str(),
+    #     "GatewayClusterId": str(),
+    #     "IsTenantAdminApi": str(),
+    #     "GatewayClustersObjectIds": str(),
+    # }
+    # df = pd.DataFrame(schema, index=[0])
 
     activity_event_service = GetActivityEventsService()
     activity_api_response = activity_event_service.get_activity_event(
@@ -137,9 +140,9 @@ def main(event_date):
         save_output(path, activity_events, event_date, event_type, response_counter)
 
         # Append data to the dataframe
-        df2 = pd.DataFrame(activity_events)
-        df = df.dropna(subset=["Id"], inplace=True)
-        df = pd.concat([df, df2])
+        # df2 = pd.DataFrame(activity_events)
+        # df = df.dropna(subset=["Id"], inplace=True)
+        # df = pd.concat([df, df2])
 
         # Increment the counter
         response_counter += 1
