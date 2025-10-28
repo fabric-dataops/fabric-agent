@@ -19,7 +19,7 @@ current_date = date.today().strftime("%Y_%m_%d")
 response_counter = 0
 
 # Folder path
-path = "./data/ActivityEvents/"
+path = "./data/activity_events/"
 
 # Initialize app object and load config
 app = App.setup(BaseConfig)
