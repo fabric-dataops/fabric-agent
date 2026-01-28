@@ -255,7 +255,7 @@ def get_scan_results(access_token, scan_id, scan_no, scan_count):
         # Save api response as JSON
 
         # Create the directory if it doesn't exist
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        os.makedirs(file_path, exist_ok=True)
 
         with open(
             f"{file_path}/{scan_id}_scan_results.json",
@@ -299,6 +299,10 @@ def get_scan_results(access_token, scan_id, scan_no, scan_count):
         #     scan_no,
         #     scan_count,
         # )
+
+        # Create the directories if they don't exist
+        os.makedirs(dest_folder_ws, exist_ok=True)
+        os.makedirs(dest_folder_ds, exist_ok=True)
 
         # Save Workspaces as JSON
         with open(
