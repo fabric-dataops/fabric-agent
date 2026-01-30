@@ -48,7 +48,8 @@ def save_output(path, data, event_date, event_type, suffix):
 def main(event_date):
 
     # Construct variables
-    access_token = AadService.get_access_token()
+    access_token = '' 
+    # AadService.get_access_token()
     start_date_time = f"'{event_date}T00:00:00.000Z'"
     end_date_time = f"'{event_date}T23:59:59.999Z'"
     event_type = "all"
@@ -216,8 +217,8 @@ def daterange(start_date, end_date):
         yield start_date + timedelta(days=n)
 
 
-start_date = date(2025, 9, 28)
-end_date = date(2025, 10, 1)
+start_date = date(2026, 1, 20)
+end_date = date(2026, 1, 30)
 
 for curr_date in daterange(start_date, end_date):
     main(curr_date)
