@@ -95,7 +95,7 @@ class GetGatewaysService:
         }
 
         # Construct the endpoint URL
-        endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg//gateways/{gateway_id}/datasources/{datasource_id}/status"
+        endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/gateways/{gateway_id}/datasources/{datasource_id}/users"
 
         api_response = requests.get(endpoint_url, headers=self.headers, verify=True)
 
