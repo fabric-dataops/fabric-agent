@@ -31,6 +31,29 @@ class SemanticModelService:
 
         return api_response
 
+    def get_semantic_models_in_group(self, access_token, workspace_id):
+        """Returns a list of semantic models for a given workspace.
+
+        Args:
+            access_token (str): Access token
+            workspace_id (str): Workspace (group) Id
+
+        Returns:
+            Response: Response from the API call
+        """
+
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + access_token,
+        }
+
+        # Construct the endpoint URL
+        endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/groups/{workspace_id}/datasets"
+
+        api_response = requests.get(endpoint_url, headers=self.headers, verify=True)
+
+        return api_response
+
     def refresh_semantic_model(
         self,
         access_token: str,
