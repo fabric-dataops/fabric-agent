@@ -332,7 +332,8 @@ def main(modified_since: str = None):
       modified_since: Last modified date of workspaces to return from (must be in ISO 8601 compliant UTC format)
     """
     # Get access token
-    access_token = '' #AadService.get_access_token()
+    access_token = ''
+    #AadService.get_access_token()
 
     workspaces = get_modified_workspaces(
         access_token=access_token,
