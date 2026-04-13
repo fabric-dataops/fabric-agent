@@ -29,6 +29,9 @@ class BaseConfig(object):
     # End point URL for Power BI API
     POWER_BI_API_URL = 'https://api.powerbi.com/'
 
+    # End point URL for Microsoft Fabric API
+    FABRIC_API_URL = 'https://api.fabric.microsoft.com/'
+
     # Master user email address. Required only for MasterUser authentication mode.
     POWER_BI_USER = ''
 
