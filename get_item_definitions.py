@@ -157,6 +157,7 @@ def poll_pending_operations(access_token, pending_ops):
                     f"  Error checking status for op {op['op_id']}: "
                     f"{status_response.status_code} {status_response.text}"
                 )
+                op["next_check_at"] = datetime.now().timestamp() + op["retry_after"]
                 still_pending.append(op)
                 continue
 
@@ -217,6 +218,10 @@ def write_definitions(ws_id, data):
         path = part.get("path", "").lstrip("/")
         payload = part.get("payload", "")
         payload_type = part.get("payloadType", "")
+
+        if not path:
+            print(f"  Skipping part with empty path for workspace {ws_id}")
+            continue
 
         if payload_type != "InlineBase64":
             print(f"  Unsupported payloadType '{payload_type}' for {path}, skipping")
