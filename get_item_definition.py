@@ -77,8 +77,8 @@ def main(workspace_id, item_id, format=None):
         item_id (str): The item ID.
         format (str | None): Optional format of the item definition.
     """
-    access_token = AadService.get_access_token()
-    # access_token = ''  # swap in for manual testing without live auth
+    # access_token = AadService.get_access_token()
+    access_token = ''  # swap in for manual testing without live auth
 
     svc = BulkExportItemDefinitionsService()
 
