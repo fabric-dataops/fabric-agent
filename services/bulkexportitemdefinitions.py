@@ -78,3 +78,35 @@ class BulkExportItemDefinitionsService:
         return requests.get(
             f"{location_url}/result", headers=self.headers, verify=True, timeout=180
         )
+
+    def get_item_definition(self, access_token, workspace_id, item_id, format=None):
+        """Returns the definition of a single Fabric item.
+
+        Args:
+            access_token (str): Access token to call API.
+            workspace_id (str): The workspace ID.
+            item_id (str): The item ID.
+            format (str | None): Optional format of the item definition.
+
+        Returns:
+            Response: 200 (immediate result), 202 (LRO started), 429 (rate limited),
+                      or other error status.
+        """
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + access_token,
+        }
+
+        endpoint_url = (
+            f"{app.config.FABRIC_API_URL}v1/workspaces/{workspace_id}"
+            f"/items/{item_id}/getDefinition"
+        )
+        if format:
+            endpoint_url += f"?format={format}"
+
+        return requests.post(
+            endpoint_url,
+            headers=self.headers,
+            verify=True,
+            timeout=180,
+        )
