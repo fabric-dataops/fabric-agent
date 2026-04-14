@@ -54,7 +54,11 @@ def write_definition(ws_id, item_id, data):
 
         try:
             decoded = base64.b64decode(payload)
-            full_path = os.path.join(output_dir, path)
+            full_path = os.path.realpath(os.path.join(output_dir, path))
+            safe_root = os.path.realpath(output_dir)
+            if not full_path.startswith(safe_root + os.sep):
+                print(f"  Skipping unsafe path '{path}' for item {item_id}")
+                continue
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "wb") as f:
                 f.write(decoded)
@@ -146,7 +150,7 @@ def main(workspace_id, item_id, format=None):
                     data = result_response.json()
                 else:
                     print(
-                        f"Error fetching result: "
+                        f"Error fetching result for item {item_id}, op_id={op_id}: "
                         f"{result_response.status_code} {result_response.text}"
                     )
                     return
