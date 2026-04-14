@@ -7,6 +7,9 @@ from app import App as app
 
 class BulkExportItemDefinitionsService:
     headers = None
+    # Status and result calls are intentionally kept separate (not wrapped in a
+    # blocking poll loop) so callers can drive polling across multiple workspaces
+    # concurrently using per-operation next_check_at timestamps.
 
     def bulk_export_definitions(self, access_token, workspace_id):
         """Initiates a bulk export of all supported item definitions in a workspace.
