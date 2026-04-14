@@ -8,6 +8,15 @@ from config import BaseConfig
 from services.aadservice import AadService
 from services.bulkexportitemdefinitions import BulkExportItemDefinitionsService
 
+
+def _parse_retry_after(value, default):
+    """Parse a Retry-After header value as seconds, falling back to default."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 App.setup(BaseConfig)
 
 current_date = date.today().strftime("%Y-%m-%d")
@@ -31,7 +40,7 @@ def write_definition(ws_id, item_id, data):
     written = 0
 
     for part in parts:
-        path = part.get("path", "")
+        path = part.get("path", "").lstrip("/")
         payload = part.get("payload", "")
         payload_type = part.get("payloadType", "")
 
@@ -86,12 +95,15 @@ def main(workspace_id, item_id, format=None):
         elif response.status_code == 202:
             location_url = response.headers.get("Location", "")
             op_id = response.headers.get("x-ms-operation-id", "")
-            retry_after = int(response.headers.get("Retry-After", 5))
+            retry_after = _parse_retry_after(response.headers.get("Retry-After"), 5)
+            if not op_id or not location_url:
+                print(f"Error: 202 response missing Location or x-ms-operation-id header")
+                return
             print(f"LRO started for item {item_id}, op_id={op_id}")
             break
 
         elif response.status_code == 429:
-            retry_after = int(response.headers.get("Retry-After", 10))
+            retry_after = _parse_retry_after(response.headers.get("Retry-After"), 10)
             print(f"Rate limited, retrying in {retry_after}s")
             time.sleep(retry_after)
 
@@ -145,8 +157,8 @@ def main(workspace_id, item_id, format=None):
                 return
 
             else:  # Running or unrecognised
-                retry_after = int(
-                    status_response.headers.get("Retry-After", retry_after)
+                retry_after = _parse_retry_after(
+                    status_response.headers.get("Retry-After"), retry_after
                 )
 
     # Phase 3: decode and write files
