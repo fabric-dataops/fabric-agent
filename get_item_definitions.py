@@ -41,7 +41,7 @@ def get_workspaces(access_token, workspace_id=None):
             f"Error fetching workspaces: {response.status_code} {response.reason}"
         )
         print(response.content)
-        raise SystemExit(1)
+        return []
 
     data = response.json()
     workspaces = data.get("workspaces", [])
@@ -111,9 +111,16 @@ def fire_export_requests(access_token, workspaces):
                 time.sleep(retry_after)
 
             else:
-                print(
-                    f"  Error {response.status_code} {response.reason}: {response.text}"
-                )
+                try:
+                    err_code = response.json().get("errorCode", "")
+                except Exception:
+                    err_code = ""
+                if err_code == "ItemsHaveProtectedLabels":
+                    print(f"  Warning: workspace {ws_id} has protected labels, skipping")
+                else:
+                    print(
+                        f"  Error {response.status_code} {response.reason}: {response.text}"
+                    )
                 break
 
     return immediate_results, pending_ops
@@ -161,7 +168,8 @@ def poll_pending_operations(access_token, pending_ops):
                 still_pending.append(op)
                 continue
 
-            status = status_response.json().get("status", "")
+            status_data = status_response.json()
+            status = status_data.get("status", "")
 
             if status == "Succeeded":
                 print(f"  LRO succeeded for workspace {op['ws_id']}, fetching result...")
@@ -179,7 +187,7 @@ def poll_pending_operations(access_token, pending_ops):
             elif status == "Failed":
                 print(
                     f"  LRO failed for workspace {op['ws_id']}, op_id={op['op_id']}: "
-                    f"{status_response.json()}"
+                    f"{status_data}"
                 )
 
             else:  # Running or unrecognised — keep polling
@@ -252,6 +260,9 @@ def main(workspace_id=None):
 
     # Phase 0: resolve workspaces
     workspaces = get_workspaces(access_token, workspace_id)
+    if not workspaces:
+        print("No workspaces to process.")
+        return
 
     # Phase 1: fire all export requests
     immediate_results, pending_ops = fire_export_requests(access_token, workspaces)
