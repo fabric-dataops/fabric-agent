@@ -2,9 +2,12 @@ import json
 import os
 from datetime import date
 
+from azure.core.exceptions import HttpResponseError
+from microsoft_fabric_api import FabricClient
+
 from app import App
 from config import BaseConfig
-from services.aadservice import AadService
+from services.fabriccredential import build_credential
 from services.listitems import ListItemsService
 from services.listworkspaces import ListWorkspacesService
 
@@ -27,7 +30,6 @@ def save_output(path, data, workspace_id, filename):
         workspace_id (str): The workspace ID used as a sub-folder.
         filename (str): Name of the output file.
     """
-
     folder_path = os.path.join(path, current_date, workspace_id)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
@@ -50,49 +52,25 @@ def main(workspace_id=None, item_type=None):
             "SemanticModel", "Lakehouse", "Notebook"). When omitted, all item
             types are returned.
     """
-
-    # Obtain an access token
-    # access_token = AadService.get_access_token()
-    access_token = ''
-    list_workspaces_service = ListWorkspacesService()
-    list_items_service = ListItemsService()
+    credential = build_credential()
+    client = FabricClient(credential)
+    list_workspaces_service = ListWorkspacesService(client)
+    list_items_service = ListItemsService(client)
 
     # ----- Step 1: Determine workspaces to process -----
     if workspace_id:
-        workspaces = [{"id": workspace_id}]
+        workspaces_to_process = [(workspace_id, "unknown")]
         print(f"Processing workspace: {workspace_id}")
     else:
         print("Fetching all active workspaces")
-        workspaces_response = list_workspaces_service.list_workspaces(access_token)
-
-        if not workspaces_response.ok:
-            print(
-                f"Error fetching workspaces: {workspaces_response.status_code} "
-                f"{workspaces_response.reason}"
-            )
-            print(workspaces_response.content)
+        try:
+            workspaces = list(list_workspaces_service.list_workspaces())
+        except HttpResponseError as e:
+            print(f"Error fetching workspaces: {e.status_code} {e.reason}")
             return
-
-        workspaces_data = workspaces_response.json()
-        workspaces = workspaces_data.get("workspaces", [])
-
-        # Handle pagination via continuationUri
-        while workspaces_data.get("continuationUri"):
-            continuation_response = list_workspaces_service.list_workspaces_cont(
-                access_token, workspaces_data["continuationUri"]
-            )
-            if not continuation_response.ok:
-                print(
-                    f"Error fetching continuation workspaces: "
-                    f"{continuation_response.status_code} {continuation_response.reason}"
-                )
-                break
-            workspaces_data = continuation_response.json()
-            workspaces.extend(workspaces_data.get("workspaces", []))
 
         print(f"Found {len(workspaces)} workspace(s)")
 
-        # Save the full workspaces list
         folder_path = os.path.join(output_path, current_date)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
@@ -100,53 +78,34 @@ def main(workspace_id=None, item_type=None):
         with open(
             os.path.join(folder_path, "workspaces.json"), "w", encoding="utf-8"
         ) as f:
-            json.dump(workspaces, f, indent=2)
+            json.dump([ws.serialize() for ws in workspaces], f, indent=2)
+
+        workspaces_to_process = [(ws.id, ws.name) for ws in workspaces]
 
     # ----- Step 2: For each workspace, get its items -----
-    for workspace in workspaces:
-        ws_id = workspace.get("id")
-        ws_name = workspace.get("displayName", workspace.get("name", "unknown"))
-
+    for ws_id, ws_name in workspaces_to_process:
         print(f"\nProcessing workspace: {ws_name} ({ws_id})")
 
-        items_response = list_items_service.list_items(access_token, ws_id, item_type)
-
-        if not items_response.ok:
+        try:
+            items = list(list_items_service.list_items(ws_id, item_type))
+        except HttpResponseError as e:
             print(
                 f"  Error fetching items for workspace {ws_id}: "
-                f"{items_response.status_code} {items_response.reason}"
+                f"{e.status_code} {e.reason}"
             )
             continue
 
-        items_data = items_response.json()
-        items = items_data.get("value", [])
+        items_dicts = [item.serialize() for item in items]
+        for item_dict in items_dicts:
+            item_dict["workspaceId"] = ws_id
 
-        # Handle pagination via continuationUri
-        while items_data.get("continuationUri"):
-            continuation_response = list_items_service.list_items_cont(
-                access_token, items_data["continuationUri"]
-            )
-            if not continuation_response.ok:
-                print(
-                    f"  Error fetching continuation items for workspace {ws_id}: "
-                    f"{continuation_response.status_code} {continuation_response.reason}"
-                )
-                break
-            items_data = continuation_response.json()
-            items.extend(items_data.get("value", []))
+        print(f"  Found {len(items_dicts)} item(s)")
 
-        # Inject the workspace ID into each item record
-        for item in items:
-            item["workspaceId"] = ws_id
-
-        print(f"  Found {len(items)} item(s)")
-
-        # Save items for this workspace
         filename = f"{ws_id}_items.json"
         if item_type:
             filename = f"{ws_id}_{item_type.lower()}_items.json"
 
-        save_output(output_path, items, ws_id, filename)
+        save_output(output_path, items_dicts, ws_id, filename)
 
     print("\nDone.")
 
