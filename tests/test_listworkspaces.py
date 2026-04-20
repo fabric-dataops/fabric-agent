@@ -3,10 +3,6 @@ from services.listworkspaces import ListWorkspacesService
 
 
 def _make_client(workspaces):
-    ws = MagicMock()
-    ws.id = "ws1"
-    ws.display_name = "My Workspace"
-
     client = MagicMock()
     client.admin.workspaces.list_workspaces.return_value = iter(workspaces)
     return client
