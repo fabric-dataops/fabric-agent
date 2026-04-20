@@ -17,5 +17,6 @@ def build_credential():
             client_id=config.CLIENT_ID,
             username=config.POWER_BI_USER,
             password=config.POWER_BI_PASS,
+            tenant_id=config.TENANT_ID,
         )
     raise ValueError(f"Unsupported AUTHENTICATION_MODE: {config.AUTHENTICATION_MODE}")

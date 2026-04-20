@@ -16,45 +16,32 @@ current_date = date.today().strftime("%Y-%m-%d")
 OUTPUT_BASE = "./data/item_definitions"
 
 
-def get_workspaces(access_token, workspace_id=None):
+def get_workspaces(workspace_id=None):
     """Resolve the list of workspaces to process.
 
     Args:
-        access_token (str): Access token.
         workspace_id (str | None): When provided, returns a single-item list.
-            When None, fetches all active workspaces with pagination.
+            When None, fetches all active workspaces via the Fabric SDK.
 
     Returns:
         list[dict]: List of workspace dicts with at least an "id" key.
-
-    Raises:
-        SystemExit: If the workspace list cannot be fetched.
     """
     if workspace_id:
-        return [{"id": workspace_id}]
+        return [{"id": workspace_id, "name": workspace_id}]
 
-    svc = ListWorkspacesService()
-    response = svc.list_workspaces(access_token)
+    from azure.core.exceptions import HttpResponseError
+    from microsoft_fabric_api import FabricClient
+    from services.fabriccredential import build_credential
 
-    if not response.ok:
-        print(
-            f"Error fetching workspaces: {response.status_code} {response.reason}"
-        )
-        print(response.content)
+    credential = build_credential()
+    client = FabricClient(credential)
+    svc = ListWorkspacesService(client)
+
+    try:
+        workspaces = [ws.serialize() for ws in svc.list_workspaces()]
+    except HttpResponseError as e:
+        print(f"Error fetching workspaces: {e.status_code} {e.reason}")
         return []
-
-    data = response.json()
-    workspaces = data.get("workspaces", [])
-
-    while data.get("continuationUri"):
-        cont = svc.list_workspaces_cont(access_token, data["continuationUri"])
-        if not cont.ok:
-            print(
-                f"Error fetching continuation workspaces: {cont.status_code} {cont.reason}"
-            )
-            break
-        data = cont.json()
-        workspaces.extend(data.get("workspaces", []))
 
     print(f"Found {len(workspaces)} workspace(s)")
     return workspaces
@@ -259,7 +246,7 @@ def main(workspace_id=None):
     # access_token = ''  # swap in for manual testing without live auth
 
     # Phase 0: resolve workspaces
-    workspaces = get_workspaces(access_token, workspace_id)
+    workspaces = get_workspaces(workspace_id)
     if not workspaces:
         print("No workspaces to process.")
         return

@@ -78,9 +78,9 @@ def main(workspace_id=None, item_type=None):
         with open(
             os.path.join(folder_path, "workspaces.json"), "w", encoding="utf-8"
         ) as f:
-            json.dump([ws.as_dict() for ws in workspaces], f, indent=2)
+            json.dump([ws.serialize() for ws in workspaces], f, indent=2)
 
-        workspaces_to_process = [(ws.id, ws.display_name) for ws in workspaces]
+        workspaces_to_process = [(ws.id, ws.name) for ws in workspaces]
 
     # ----- Step 2: For each workspace, get its items -----
     for ws_id, ws_name in workspaces_to_process:
@@ -95,7 +95,7 @@ def main(workspace_id=None, item_type=None):
             )
             continue
 
-        items_dicts = [item.as_dict() for item in items]
+        items_dicts = [item.serialize() for item in items]
         for item_dict in items_dicts:
             item_dict["workspaceId"] = ws_id
 

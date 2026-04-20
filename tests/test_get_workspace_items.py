@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 def _make_workspace(ws_id, display_name):
     ws = MagicMock()
     ws.id = ws_id
-    ws.display_name = display_name
-    ws.as_dict.return_value = {"id": ws_id, "displayName": display_name}
+    ws.name = display_name
+    ws.serialize.return_value = {"id": ws_id, "name": display_name}
     return ws
 
 
@@ -14,7 +14,7 @@ def _make_item(item_id, item_type, ws_id):
     item = MagicMock()
     item.id = item_id
     item.type = item_type
-    item.as_dict.return_value = {"id": item_id, "type": item_type}
+    item.serialize.return_value = {"id": item_id, "type": item_type}
     return item
 
 
