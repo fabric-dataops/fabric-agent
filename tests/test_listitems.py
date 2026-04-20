@@ -9,7 +9,7 @@ def _make_client(items):
 
 
 def test_list_items_delegates_to_sdk():
-    mock_item = MagicMock(id="item1", display_name="My Notebook", type="Notebook")
+    mock_item = MagicMock()
     client = _make_client([mock_item])
 
     service = ListItemsService(client)
@@ -23,7 +23,7 @@ def test_list_items_passes_item_type_filter():
     client = _make_client([])
 
     service = ListItemsService(client)
-    list(service.list_items("ws1", item_type="Report"))
+    _ = list(service.list_items("ws1", item_type="Report"))
 
     client.core.items.list_items.assert_called_once_with("ws1", type="Report")
 
