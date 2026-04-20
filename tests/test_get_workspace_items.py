@@ -1,7 +1,5 @@
-import json
-import os
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 
 def _make_workspace(ws_id, display_name):

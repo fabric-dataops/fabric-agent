@@ -22,6 +22,14 @@ output_path = "./data/workspace_items/"
 
 
 def save_output(path, data, workspace_id, filename):
+    """Save JSON data to a file organised by date and workspace.
+
+    Args:
+        path (str): Base output directory.
+        data (dict | list): JSON-serialisable data to write.
+        workspace_id (str): The workspace ID used as a sub-folder.
+        filename (str): Name of the output file.
+    """
     folder_path = os.path.join(path, current_date, workspace_id)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
