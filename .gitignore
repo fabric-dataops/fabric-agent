@@ -223,3 +223,5 @@ logs/
 
 # macOS
 .DS_Store
+.env
+.mcp.json
