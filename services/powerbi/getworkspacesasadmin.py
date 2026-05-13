@@ -31,11 +31,15 @@ class GetWorkspacesService:
 
         # Construct the endpoint URL
 
-        if expand:
+        if expand and workspace_filter:
             endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/admin/groups?$expand={expand}&$filter={workspace_filter}&$top={top}&$skip={skip}"
-        else:
+        elif workspace_filter:
             endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/admin/groups?$filter={workspace_filter}&$top={top}&$skip={skip}"
-
+        elif expand:
+            endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/admin/groups?$expand={expand}&$top={top}&$skip={skip}"
+        else:
+            endpoint_url = f"{app.config.POWER_BI_API_URL}v1.0/myorg/admin/groups?$top={top}&$skip={skip}"
+            print(endpoint_url)
         api_response = requests.get(
             endpoint_url, headers=self.headers, verify=True, timeout=300
         )
