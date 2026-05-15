@@ -7,6 +7,7 @@ from app import App
 from config import BaseConfig
 from services.aadservice import AadService
 from services.bulkexportitemdefinitions import BulkExportItemDefinitionsService
+from services.cloudlogger import get_logger
 
 
 def _parse_retry_after(value, default):
@@ -18,6 +19,8 @@ def _parse_retry_after(value, default):
 
 
 App.setup(BaseConfig)
+
+logger = get_logger(__name__)
 
 current_date = date.today().strftime("%Y-%m-%d")
 OUTPUT_BASE = "./data/item_definitions"
@@ -45,11 +48,11 @@ def write_definition(ws_id, item_id, data):
         payload_type = part.get("payloadType", "")
 
         if not path:
-            print(f"  Skipping part with empty path for item {item_id}")
+            logger.warning("Skipping part with empty path for item %s", item_id)
             continue
 
         if payload_type != "InlineBase64":
-            print(f"  Unsupported payloadType '{payload_type}' for {path}, skipping")
+            logger.warning("Unsupported payloadType '%s' for %s, skipping", payload_type, path)
             continue
 
         try:
@@ -57,16 +60,16 @@ def write_definition(ws_id, item_id, data):
             full_path = os.path.realpath(os.path.join(output_dir, path))
             safe_root = os.path.realpath(output_dir)
             if not full_path.startswith(safe_root + os.sep):
-                print(f"  Skipping unsafe path '{path}' for item {item_id}")
+                logger.warning("Skipping unsafe path '%s' for item %s", path, item_id)
                 continue
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "wb") as f:
                 f.write(decoded)
             written += 1
         except Exception as e:
-            print(f"  Error writing {path} for item {item_id}: {e}")
+            logger.error("Error writing %s for item %s: %s", path, item_id, e)
 
-    print(f"  Wrote {written}/{len(parts)} definition parts for item {item_id}")
+    logger.info("Wrote %s/%s definition parts for item %s", written, len(parts), item_id)
 
 
 def main(workspace_id, item_id, format=None):
@@ -93,7 +96,7 @@ def main(workspace_id, item_id, format=None):
 
         if response.status_code == 200:
             data = response.json()
-            print(f"Immediate result received for item {item_id}")
+            logger.debug("Immediate result received for item %s", item_id)
             break
 
         elif response.status_code == 202:
@@ -101,14 +104,14 @@ def main(workspace_id, item_id, format=None):
             op_id = response.headers.get("x-ms-operation-id", "")
             retry_after = _parse_retry_after(response.headers.get("Retry-After"), 5)
             if not op_id or not location_url:
-                print(f"Error: 202 response missing Location or x-ms-operation-id header")
+                logger.error("202 response missing Location or x-ms-operation-id header for item %s", item_id)
                 return
-            print(f"LRO started for item {item_id}, op_id={op_id}")
+            logger.info("LRO started for item %s, op_id=%s", item_id, op_id)
             break
 
         elif response.status_code == 429:
             retry_after = _parse_retry_after(response.headers.get("Retry-After"), 10)
-            print(f"Rate limited, retrying in {retry_after}s")
+            logger.warning("Rate limited, retrying in %ss", retry_after)
             time.sleep(retry_after)
 
         else:
@@ -117,26 +120,32 @@ def main(workspace_id, item_id, format=None):
             except Exception:
                 err_code = ""
             if err_code == "OperationNotSupportedForItem":
-                print(f"Warning: item {item_id} does not support definition export")
+                logger.warning("Item %s does not support definition export", item_id)
             else:
-                print(
-                    f"Error {response.status_code} {response.reason} "
-                    f"({err_code}): {response.text}"
+                logger.error(
+                    "%s %s (%s): %s RequestId: %s",
+                    response.status_code,
+                    response.reason,
+                    err_code,
+                    response.text,
+                    response.headers.get("RequestId"),
                 )
             return
 
     # Phase 2: poll LRO if needed
     if data is None:
         while True:
-            print(f"Waiting {retry_after}s for LRO...")
+            logger.debug("Waiting %ss for LRO op_id=%s", retry_after, op_id)
             time.sleep(retry_after)
 
             status_response = svc.get_operation_status(access_token, op_id)
 
             if not status_response.ok:
-                print(
-                    f"Error checking status for op {op_id}: "
-                    f"{status_response.status_code} {status_response.text}"
+                logger.error(
+                    "Error checking status for op %s: %s %s",
+                    op_id,
+                    status_response.status_code,
+                    status_response.text,
                 )
                 continue  # retry with same retry_after
 
@@ -144,20 +153,23 @@ def main(workspace_id, item_id, format=None):
             status = status_data.get("status", "")
 
             if status == "Succeeded":
-                print(f"LRO succeeded, fetching result...")
+                logger.debug("LRO succeeded for op_id=%s, fetching result", op_id)
                 result_response = svc.get_operation_result(access_token, location_url)
                 if result_response.ok:
                     data = result_response.json()
                 else:
-                    print(
-                        f"Error fetching result for item {item_id}, op_id={op_id}: "
-                        f"{result_response.status_code} {result_response.text}"
+                    logger.error(
+                        "Error fetching result for item %s, op_id=%s: %s %s",
+                        item_id,
+                        op_id,
+                        result_response.status_code,
+                        result_response.text,
                     )
                     return
                 break
 
             elif status == "Failed":
-                print(f"LRO failed for item {item_id}, op_id={op_id}: {status_data}")
+                logger.error("LRO failed for item %s, op_id=%s: %s", item_id, op_id, status_data)
                 return
 
             else:  # Running or unrecognised
@@ -166,9 +178,9 @@ def main(workspace_id, item_id, format=None):
                 )
 
     # Phase 3: decode and write files
-    print(f"\nWriting definition for item {item_id}...")
+    logger.info("Writing definition for item %s", item_id)
     write_definition(workspace_id, item_id, data)
-    print("\nDone.")
+    logger.info("Done.")
 
 
 if __name__ == "__main__":
